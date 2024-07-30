@@ -14,9 +14,11 @@ import logging
 # Logging configuration
 logging.basicConfig(level=logging.DEBUG)
 
+# Load feature list and filenames
 feature_list = np.array(pickle.load(open('embeddings.pkl', 'rb')))
 filenames = pickle.load(open('filenames.pkl', 'rb'))
 
+# Initialize model
 model = ResNet50(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
 model.trainable = False
 
@@ -81,10 +83,13 @@ if uploaded_file is not None:
                 cols = st.columns(5)
                 for i, col in enumerate(cols):
                     try:
+                        image_path = filenames[indices[0][i]]
+                        absolute_image_path = os.path.abspath(image_path)
                         with col:
-                            st.image(filenames[indices[0][i]], width=90)
+                            st.image(absolute_image_path, width=90)
                     except Exception as e:
                         st.error(f"Error displaying image: {e}")
                         logging.error(f"Error displaying image: {e}")
+                        logging.error(f"Attempted path: {absolute_image_path}")
     else:
         st.header("Some error occurred in file upload")
