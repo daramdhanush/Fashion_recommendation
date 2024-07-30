@@ -35,27 +35,34 @@ def save_uploaded_file(uploaded_file):
             f.write(uploaded_file.getbuffer())
         return 1
     except Exception as e:
-        st.error(f"Error: {e}")
-        logging.error(f"Error: {e}")
+        st.error(f"Error saving file: {e}")
+        logging.error(f"Error saving file: {e}")
         return 0
 
 def feature_extraction(img_path, model):
-    img = image.load_img(img_path, target_size=(224, 224))
-    img_array = image.img_to_array(img)
-    expanded_img_array = np.expand_dims(img_array, axis=0)
-    preprocessed_img = preprocess_input(expanded_img_array)
-    result = model.predict(preprocessed_img).flatten()
-    normalized_result = result / norm(result)
-
-    return normalized_result
+    try:
+        img = image.load_img(img_path, target_size=(224, 224))
+        img_array = image.img_to_array(img)
+        expanded_img_array = np.expand_dims(img_array, axis=0)
+        preprocessed_img = preprocess_input(expanded_img_array)
+        result = model.predict(preprocessed_img).flatten()
+        normalized_result = result / norm(result)
+        return normalized_result
+    except Exception as e:
+        st.error(f"Error extracting features: {e}")
+        logging.error(f"Error extracting features: {e}")
+        return None
 
 def recommend(features, feature_list):
-    neighbors = NearestNeighbors(n_neighbors=6, algorithm='brute', metric='euclidean')
-    neighbors.fit(feature_list)
-
-    distances, indices = neighbors.kneighbors([features])
-
-    return indices
+    try:
+        neighbors = NearestNeighbors(n_neighbors=6, algorithm='brute', metric='euclidean')
+        neighbors.fit(feature_list)
+        distances, indices = neighbors.kneighbors([features])
+        return indices
+    except Exception as e:
+        st.error(f"Error in recommendation: {e}")
+        logging.error(f"Error in recommendation: {e}")
+        return None
 
 uploaded_file = st.file_uploader("Choose an image")
 if uploaded_file is not None:
@@ -65,21 +72,19 @@ if uploaded_file is not None:
         st.image(display_image, width=300, caption="Your image")
         # Feature extract
         features = feature_extraction(os.path.join("uploads", uploaded_file.name), model)
-        # Recommendation
-        indices = recommend(features, feature_list)
-
-        # Display
-        st.write("Recommended images")
-        col1, col2, col3, col4, col5 = st.columns(5)
-        with col1:
-            st.image(filenames[indices[0][0]], width=90)
-        with col2:
-            st.image(filenames[indices[0][1]], width=90)
-        with col3:
-            st.image(filenames[indices[0][2]], width=90)
-        with col4:
-            st.image(filenames[indices[0][3]], width=90)
-        with col5:
-            st.image(filenames[indices[0][4]], width=90)
+        if features is not None:
+            # Recommendation
+            indices = recommend(features, feature_list)
+            if indices is not None:
+                # Display
+                st.write("Recommended images")
+                cols = st.columns(5)
+                for i, col in enumerate(cols):
+                    try:
+                        with col:
+                            st.image(filenames[indices[0][i]], width=90)
+                    except Exception as e:
+                        st.error(f"Error displaying image: {e}")
+                        logging.error(f"Error displaying image: {e}")
     else:
         st.header("Some error occurred in file upload")
